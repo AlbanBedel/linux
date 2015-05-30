@@ -21,6 +21,7 @@
 #include <linux/bitops.h>
 #include <linux/etherdevice.h>
 #include <linux/gpio.h>
+#include <linux/reset.h>
 #include <asm/unaligned.h>
 
 #include "hw.h"
@@ -549,6 +550,24 @@ static int ath9k_hw_attach_ops(struct ath_hw *ah)
 
 	ar9003_hw_attach_ops(ah);
 	return 0;
+}
+
+static int ath9k_hw_external_reset(struct ath_hw *ah)
+{
+	int ret = 0;
+
+	ath_dbg(ath9k_hw_common(ah), RESET,
+		"reset MAC via external reset\n");
+
+	if (ah->external_reset) {
+		ret = ah->external_reset();
+	} else if (ah->reset) {
+		ret = reset_control_assert(ah->reset);
+		if (!ret)
+			ret = reset_control_deassert(ah->reset);
+	}
+
+	return ret;
 }
 
 /* Called for all hardware families */
@@ -1305,14 +1324,11 @@ static bool ath9k_hw_ar9330_reset_war(struct ath_hw *ah, int type)
 			break;
 	}
 
-	if (ah->external_reset &&
+	if ((ah->reset || ah->external_reset) &&
 	    (npend || type == ATH9K_RESET_COLD)) {
 		int reset_err = 0;
 
-		ath_dbg(ath9k_hw_common(ah), RESET,
-			"reset MAC via external reset\n");
-
-		reset_err = ah->external_reset();
+		reset_err = ath9k_hw_external_reset(ah);
 		if (reset_err) {
 			ath_err(ath9k_hw_common(ah),
 				"External reset failed, err=%d\n",

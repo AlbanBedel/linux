@@ -26,6 +26,7 @@
 #include <linux/relay.h>
 #include <linux/dmi.h>
 #include <linux/clk.h>
+#include <linux/reset.h>
 #include <net/ieee80211_radiotap.h>
 
 #include "ath9k.h"
@@ -751,6 +752,15 @@ static int ath9k_init_softc(u16 devid, struct ath_softc *sc,
 	/* If no MAC address has been set yet try to use nvmem */
 	if (!is_valid_ether_addr(common->macaddr))
 		ath9k_get_nvmem_address(sc);
+
+	/* Try to get a reset controller */
+	ah->reset = devm_reset_control_get_optional(sc->dev, NULL);
+	if (IS_ERR(ah->reset)) {
+		if (PTR_ERR(ah->reset) != -ENOENT &&
+		    PTR_ERR(ah->reset) != -ENOTSUPP)
+			return PTR_ERR(ah->reset);
+		ah->reset = NULL;
+	}
 
 	/* If the EEPROM hasn't been retrieved via firmware request
 	 * use the nvmem API insted.
