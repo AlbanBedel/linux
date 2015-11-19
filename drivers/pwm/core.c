@@ -666,7 +666,7 @@ struct pwm_device *of_pwm_get(struct device_node *np, const char *con_id)
 	if (con_id) {
 		index = of_property_match_string(np, "pwm-names", con_id);
 		if (index < 0)
-			return ERR_PTR(index);
+			return ERR_PTR(-ENOENT);
 	}
 
 	err = of_parse_phandle_with_args(np, "pwms", "#pwm-cells", index,
