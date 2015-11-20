@@ -127,6 +127,25 @@
 
 				#reset-cells = <1>;
 			};
+
+			wmac: wifi@180c0000 {
+				compatible = "qca,ar9132-wmac",
+						"qca,ar9100-wmac";
+				reg = <0x180c0000 0x30000>;
+
+				interrupt-parent = <&cpuintc>;
+				interrupts = <2>;
+
+				clock-names = "ref";
+				/* This is the board oscillator */
+
+				nvmem-cell-names = "eeprom", "address";
+				/* The board must define the nvmem cells */
+
+				resets = <&rst 22>;
+
+				status = "disabled";
+			};
 		};
 
 		usb: usb@1b000100 {
