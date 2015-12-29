@@ -120,6 +120,18 @@
 				#reset-cells = <1>;
 			};
 
+			extintc: interrupt-controller@180600ac {
+				compatible = "qca,qca9558-ext-intc",
+					   "qca,qca9550-ext-intc";
+				reg = <0x180600ac 0x4>;
+
+				interrupt-parent = <&cpuintc>;
+				interrupts = <2>, <3>;
+
+				interrupt-controller;
+				#interrupt-cells = <1>;
+			};
+
 			rst2: reset-controller@180600c4 {
 				compatible = "qca,qca9558-reset",
 						"qca,ar7100-reset";
