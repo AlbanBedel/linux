@@ -32,6 +32,10 @@
 			};
 		};
 
+		usb@1b000100 {
+			status = "okay";
+		};
+
 		spi@1f000000 {
 			status = "okay";
 			num-cs = <1>;
@@ -45,6 +49,11 @@
 				spi-max-frequency = <25000000>;
 			};
 		};
+	};
+
+	usb-phy-0 {
+		status = "okay";
+		phy-supply = <&vdd_usb_phy>;
 	};
 
 	gpio-keys {
@@ -91,4 +100,30 @@
 		};
 	};
 
+	regulators {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		vdd_ext: regulator@0 {
+			compatible = "regulator-fixed";
+			reg = <0>;
+			regulator-name = "+12V EXT";
+			regulator-min-microvolt = <12000000>;
+			regulator-max-microvolt = <12000000>;
+			regulator-always-on;
+			regulator-boot-on;
+		};
+
+		vdd_usb_phy: regulator@10 {
+			compatible = "regulator-fixed";
+			reg = <10>;
+			regulator-name = "+5V USB";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&gpio 21 GPIO_ACTIVE_HIGH>;
+			enable-active-high;
+			vin-supply = <&vdd_ext>;
+		};
+	};
 };
