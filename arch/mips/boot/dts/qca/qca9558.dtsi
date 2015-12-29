@@ -141,6 +141,38 @@
 			};
 		};
 
+		usb@1b000100 {
+			compatible = "qca,qca9550-ehci", "generic-ehci";
+			reg = <0x1b000100 0x1000>;
+
+			interrupt-parent = <&extintc>;
+			interrupts = <24>;
+			resets = <&rst 5>;
+
+			has-transaction-translator;
+
+			phy-names = "usb";
+			phys = <&usb_phy0>;
+
+			status = "disabled";
+		};
+
+		usb@1b400100 {
+			compatible = "qca,qca9550-ehci", "generic-ehci";
+			reg = <0x1b400100 0x1000>;
+
+			interrupt-parent = <&extintc>;
+			interrupts = <28>;
+			resets = <&rst2 5>;
+
+			has-transaction-translator;
+
+			phy-names = "usb";
+			phys = <&usb_phy1>;
+
+			status = "disabled";
+		};
+
 		spi@1f000000 {
 			compatible = "qca,qca9558-spi", "qca,ar7100-spi";
 			reg = <0x1f000000 0x10>;
@@ -153,5 +185,27 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 		};
+	};
+
+	usb_phy0: usb-phy-0 {
+		compatible = "qca,ar7100-usb-phy";
+
+		reset-names = "usb-phy", "usb-suspend-override";
+		resets = <&rst 4>, <&rst 3>;
+
+		#phy-cells = <0>;
+
+		status = "disabled";
+	};
+
+	usb_phy1: usb-phy-1 {
+		compatible = "qca,ar7100-usb-phy";
+
+		reset-names = "usb-phy", "usb-suspend-override";
+		resets = <&rst2 4>, <&rst2 3>;
+
+		#phy-cells = <0>;
+
+		status = "disabled";
 	};
 };
