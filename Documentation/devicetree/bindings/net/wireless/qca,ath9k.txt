@@ -27,16 +27,34 @@ Required properties:
 			- 0034 for AR9462
 			- 0036 for AR9565
 			- 0037 for AR9485
+		For SoC devices the compatible should be "qca,<soctype>-wmac"
+		and one of the following fallbacks:
+			- "qca,ar9100-wmac"
+			- "qca,ar9330-wmac"
+			- "qca,ar9340-wmac"
+			- "qca,qca9550-wmac"
+			- "qca,qca9530-wmac"
 - reg: Address and length of the register set for the device.
 
+Required properties for SoC devices:
+- interrupt-parent: phandle of the parent interrupt controller.
+- interrupts: Interrupt specifier for the controllers interrupt.
+
 Optional properties:
+- mac-address: See ethernet.txt in the parent directory
+- local-mac-address: See ethernet.txt in the parent directory
+- clock-names: has to be "ref"
+- clocks: phandle of the reference clock
+- resets: phandle of the reset line
+- nvmem-cell-names: has to be "eeprom" and/or "address"
+- nvmem-cells: phandle to the eeprom nvmem cell and/or to the mac address
+		nvmem cell.
+
+Deprecated properties:
 - qca,no-eeprom: Indicates that there is no physical EEPROM connected to the
 			ath9k wireless chip (in this case the calibration /
 			EEPROM data will be loaded from userspace using the
 			kernel firmware loader).
-- mac-address: See ethernet.txt in the parent directory
-- local-mac-address: See ethernet.txt in the parent directory
-
 
 In this example, the node is defined as child node of the PCI controller:
 &pci0 {
@@ -46,3 +64,20 @@ In this example, the node is defined as child node of the PCI controller:
 		qca,no-eeprom;
 	};
 };
+
+In this example it is defined as a SoC device:
+	wifi@180c0000 {
+		compatible = "qca,ar9132-wmac", "qca,ar9100-wmac";
+		reg = <0x180c0000 0x30000>;
+
+		interrupt-parent = <&cpuintc>;
+		interrupts = <2>;
+
+		clock-names = "ref";
+		clocks = <&extosc>;
+
+		nvmem-cell-names = "eeprom", "address";
+		nvmem-cells = <&wmac_eeprom>, <&wmac_address>;
+
+		resets = <&rst 22>;
+	};
