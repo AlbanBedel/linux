@@ -22,6 +22,7 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_net.h>
+#include <linux/nvmem-consumer.h>
 #include <linux/relay.h>
 #include <linux/dmi.h>
 #include <net/ieee80211_radiotap.h>
@@ -566,6 +567,7 @@ static int ath9k_eeprom_request(struct ath_softc *sc, const char *name)
 static void ath9k_eeprom_release(struct ath_softc *sc)
 {
 	release_firmware(sc->sc_ah->eeprom_blob);
+	kfree(sc->sc_ah->eeprom_data);
 }
 
 static int ath9k_init_platform(struct ath_softc *sc)
@@ -708,6 +710,25 @@ static int ath9k_init_softc(u16 devid, struct ath_softc *sc,
 	ret = ath9k_of_init(sc);
 	if (ret)
 		return ret;
+
+	/* If the EEPROM hasn't been retrieved via firmware request
+	 * use the nvmem API insted.
+	 */
+	if (!ah->eeprom_blob) {
+		struct nvmem_cell *eeprom_cell;
+
+		eeprom_cell = nvmem_cell_get(ah->dev, "eeprom");
+		if (!IS_ERR(eeprom_cell)) {
+			ah->eeprom_data = nvmem_cell_read(
+				eeprom_cell, &ah->eeprom_size);
+			nvmem_cell_put(eeprom_cell);
+
+			if (IS_ERR(ah->eeprom_data)) {
+				dev_err(ah->dev, "failed to read eeprom\n");
+				return PTR_ERR(ah->eeprom_data);
+			}
+		}
+	}
 
 	if (ath9k_led_active_high != -1)
 		ah->config.led_active_high = ath9k_led_active_high == 1;

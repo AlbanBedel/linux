@@ -973,6 +973,8 @@ struct ath_hw {
 	bool disable_5ghz;
 
 	const struct firmware *eeprom_blob;
+	void *eeprom_data;
+	size_t eeprom_size;
 
 	struct ath_dynack dynack;
 

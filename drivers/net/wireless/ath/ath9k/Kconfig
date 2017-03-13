@@ -49,6 +49,7 @@ config ATH9K_PCI
 config ATH9K_AHB
 	bool "Atheros ath9k AHB bus support"
 	depends on ATH9K
+	select NVMEM
 	default n
 	---help---
 	  This option enables the AHB bus support in ath9k.
