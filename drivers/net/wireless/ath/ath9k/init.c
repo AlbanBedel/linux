@@ -649,6 +649,35 @@ static int ath9k_of_init(struct ath_softc *sc)
 	return 0;
 }
 
+static int ath9k_get_nvmem_address(struct ath_softc *sc)
+{
+	struct ath_common *common = ath9k_hw_common(sc->sc_ah);
+	struct nvmem_cell *cell;
+	size_t cell_size;
+	int err = 0;
+	void *mac;
+
+	cell = nvmem_cell_get(sc->dev, "address");
+	if (IS_ERR(cell))
+		return PTR_ERR(cell);
+
+	mac = nvmem_cell_read(cell, &cell_size);
+	nvmem_cell_put(cell);
+
+	if (IS_ERR(mac))
+		return PTR_ERR(mac);
+
+	if (cell_size == 6) {
+		ether_addr_copy(common->macaddr, mac);
+	} else {
+		dev_err(sc->dev, "nvmem 'address' cell has invalid size\n");
+		err = -EINVAL;
+	}
+
+	kfree(mac);
+	return err;
+}
+
 static int ath9k_init_softc(u16 devid, struct ath_softc *sc,
 			    const struct ath_bus_ops *bus_ops)
 {
@@ -710,6 +739,10 @@ static int ath9k_init_softc(u16 devid, struct ath_softc *sc,
 	ret = ath9k_of_init(sc);
 	if (ret)
 		return ret;
+
+	/* If no MAC address has been set yet try to use nvmem */
+	if (!is_valid_ether_addr(common->macaddr))
+		ath9k_get_nvmem_address(sc);
 
 	/* If the EEPROM hasn't been retrieved via firmware request
 	 * use the nvmem API insted.
