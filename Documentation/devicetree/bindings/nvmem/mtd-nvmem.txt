@@ -1,0 +1,27 @@
+= NVMEM in MTD =
+
+Config data for drivers, like MAC addresses, is often stored in MTD.
+An MTD device, or one of its partition, can be defined as a NVMEM provider
+by having an 'nvmem-cells' subnode as defined in nvmem.txt.
+
+Example:
+
+	flash@0 {
+		...
+
+		partition@2 {
+			label = "art";
+			reg = <0x7F0000 0x010000>;
+			read-only;
+
+			nvmem-cells {
+				compatible = "nvmem-cells";
+				#address-cells = <1>;
+				#size-cells = <1>;
+
+				eeprom@1000 {
+					reg = <0x1000 0x1000>;
+				};
+			};
+		};
+	};
