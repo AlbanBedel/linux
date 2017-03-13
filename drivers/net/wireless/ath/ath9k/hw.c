@@ -576,6 +576,13 @@ static int __ath9k_hw_init(struct ath_hw *ah)
 	struct ath_common *common = ath9k_hw_common(ah);
 	int r = 0;
 
+	/* Reset the device before using it */
+	r = ath9k_hw_external_reset(ah);
+	if (r) {
+		ath_err(common, "Failed to reset chip\n");
+		return r;
+	}
+
 	ath9k_hw_read_revisions(ah);
 
 	switch (ah->hw_version.macVersion) {
