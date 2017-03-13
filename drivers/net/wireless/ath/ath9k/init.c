@@ -25,6 +25,7 @@
 #include <linux/nvmem-consumer.h>
 #include <linux/relay.h>
 #include <linux/dmi.h>
+#include <linux/clk.h>
 #include <net/ieee80211_radiotap.h>
 
 #include "ath9k.h"
@@ -619,6 +620,7 @@ static int ath9k_of_init(struct ath_softc *sc)
 	struct ath_hw *ah = sc->sc_ah;
 	struct ath_common *common = ath9k_hw_common(ah);
 	enum ath_bus_type bus_type = common->bus_ops->ath_bus_type;
+	struct clk *clk;
 	const char *mac;
 	char eeprom_name[100];
 	int ret;
@@ -627,6 +629,12 @@ static int ath9k_of_init(struct ath_softc *sc)
 		return 0;
 
 	ath_dbg(common, CONFIG, "parsing configuration from OF node\n");
+
+	clk = clk_get(sc->dev, "ref");
+	if (!IS_ERR(clk)) {
+		ah->is_clk_25mhz = clk_get_rate(clk) == 25000000;
+		clk_put(clk);
+	}
 
 	if (of_property_read_bool(np, "qca,no-eeprom")) {
 		/* ath9k-eeprom-<bus>-<id>.bin */
