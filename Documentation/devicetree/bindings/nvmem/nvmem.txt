@@ -11,14 +11,29 @@ these data from, and where they are stored on the storage device.
 This document is here to document this.
 
 = Data providers =
-Contains bindings specific to provider drivers and data cells as children
-of this node.
+A data provider should have a subnode named 'nvmem-cells' that contains
+a subnodes for each data cells.
+
+For backward compatibility the nvmem data cells can be direct children
+of the data provider. This use is discouraged as it can conflict with
+other bindings.
 
 Optional properties:
  read-only: Mark the provider as read only.
 
+= Data cells list =
+The data cells list node should be named 'nvmem-cells' and have a
+child node for each data cell.
+
+Required properties:
+ compatible: Must be "nvmem-cells"
+ #address-cells: <1> if the provider use 32 bit addressing,
+                 <2> for 64 bits addressing
+ #size-cells: <1> if the provider use 32 bit sizes,
+              <2> for 64 bits sizes
+
 = Data cells =
-These are the child nodes of the provider which contain data cell
+These are the child nodes of the nvmem-cells node which contain data cell
 information like offset and size in nvmem provider.
 
 Required properties:
@@ -37,24 +52,30 @@ For example:
 		...
 
 		/* Data cells */
-		tsens_calibration: calib@404 {
-			reg = <0x404 0x10>;
-		};
+		nvmem-cells {
+			compatible = "nvmem-cells";
+			#address-cells = <1>;
+			#size-cells = <1>;
 
-		tsens_calibration_bckp: calib_bckp@504 {
-			reg = <0x504 0x11>;
-			bits = <6 128>
-		};
+			tsens_calibration: calib@404 {
+				reg = <0x404 0x10>;
+			};
 
-		pvs_version: pvs-version@6 {
-			reg = <0x6 0x2>
-			bits = <7 2>
-		};
+			tsens_calibration_bckp: calib_bckp@504 {
+				reg = <0x504 0x11>;
+				bits = <6 128>
+			};
 
-		speed_bin: speed-bin@c{
-			reg = <0xc 0x1>;
-			bits = <2 3>;
+			pvs_version: pvs-version@6 {
+				reg = <0x6 0x2>
+				bits = <7 2>
+			};
 
+			speed_bin: speed-bin@c{
+				reg = <0xc 0x1>;
+				bits = <2 3>;
+
+			};
 		};
 		...
 	};

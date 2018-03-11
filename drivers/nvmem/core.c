@@ -783,6 +783,16 @@ struct nvmem_cell *of_nvmem_cell_get(struct device_node *np,
 	if (!nvmem_np)
 		return ERR_PTR(-EINVAL);
 
+	/* Devices using the new binding have all the cells in
+	 * a subnode with compatible = "nvmem-cells". In this
+	 * case the device will be the parent of this node.
+	 */
+	if (of_device_is_compatible(nvmem_np, "nvmem-cells")) {
+		nvmem_np = of_get_next_parent(nvmem_np);
+		if (!nvmem_np)
+			return ERR_PTR(-EINVAL);
+	}
+
 	nvmem = __nvmem_device_get(nvmem_np, NULL, NULL);
 	of_node_put(nvmem_np);
 	if (IS_ERR(nvmem))
