@@ -136,6 +136,25 @@ static void __init ar724x_clocks_init(void)
 	clk_add_alias("uart", NULL, "ahb", NULL);
 }
 
+static void __init ar91xx_clk_init(struct clk *ref_clk, void __iomem *pll_base)
+{
+	u32 pll, mult, div;
+
+	ar724x_clk_init(ref_clk, pll_base);
+
+	pll = __raw_readl(pll_base + AR724X_PLL_REG_ETH_CONFIG);
+	mult = ((pll >> AR724X_PLL_FB_SHIFT) & AR724X_PLL_FB_MASK);
+	div = ((pll >> AR724X_PLL_REF_DIV_SHIFT) & AR724X_PLL_REF_DIV_MASK) * 2;
+
+	clks[ATH79_CLK_ETH] = ath79_reg_ffclk("eth", "ref", mult, div);
+
+	pll = __raw_readl(pll_base + AR724X_PLL_REG_USB_CONFIG);
+	mult = ((pll >> AR724X_PLL_FB_SHIFT) & AR724X_PLL_FB_MASK);
+	div = ((pll >> AR724X_PLL_REF_DIV_SHIFT) & AR724X_PLL_REF_DIV_MASK) * 2;
+
+	clks[ATH79_CLK_USB] = ath79_reg_ffclk("usb", "ref", mult, div);
+}
+
 static void __init ar9330_clk_init(struct clk *ref_clk, void __iomem *pll_base)
 {
 	u32 clock_ctrl;
@@ -501,7 +520,7 @@ static void __init ath79_clocks_init_dt_ng(struct device_node *np)
 	}
 
 	if (of_device_is_compatible(np, "qca,ar9130-pll"))
-		ar724x_clk_init(ref_clk, pll_base);
+		ar91xx_clk_init(ref_clk, pll_base);
 	else if (of_device_is_compatible(np, "qca,ar9330-pll"))
 		ar9330_clk_init(ref_clk, pll_base);
 	else {
