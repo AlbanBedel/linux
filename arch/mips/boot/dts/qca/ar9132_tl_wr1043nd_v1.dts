@@ -111,3 +111,15 @@
 		};
 	};
 };
+
+&eth0 {
+	status = "okay";
+
+	nvmem-cells = <&wmac_address>;
+
+	phy-connection-type = "rgmii";
+	phy-handle = <&eth0>;
+	fixed-link {
+		speed = <1000>;
+	};
+};
