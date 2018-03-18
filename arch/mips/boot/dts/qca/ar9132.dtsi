@@ -127,6 +127,54 @@
 
 				#reset-cells = <1>;
 			};
+
+			mii_ctrl: mii-ctrl@18070000 {
+				compatible = "qca,ar9132-mii-ctrl",
+						"qca,ar7100-mii-ctrl";
+				reg = <0x18070000 0x8>;
+
+				#qca,mii-ctrl-cells = <1>;
+			};
+		};
+
+		eth0: ethernet@19000000 {
+			compatible = "qca,ar9132-ethernet",
+					"qca,ar9100-ethernet";
+			reg = <0x19000000 0x200>;
+			reg-names = "mac";
+
+			interrupts = <4>;
+			resets = <&rst 9>;
+
+			clocks = <&pll ATH79_CLK_ETH>;
+
+			qca,mii-ctrl = <&mii_ctrl 0>;
+			max-speed = <1000>;
+
+			nvmem-cell-names = "address";
+			/* The board must define the nvmem cells */
+
+			status = "disabled";
+		};
+
+		eth1: ethernet@1a000000 {
+			compatible = "qca,ar9132-ethernet",
+					"qca,ar9100-ethernet";
+			reg = <0x1a000000 0x200>;
+			reg-names = "mac";
+
+			interrupts = <5>;
+			resets = <&rst 13>;
+
+			clocks = <&pll ATH79_CLK_ETH>;
+
+			qca,mii-ctl = <&mii_ctrl 1>;
+			max-speed = <1000>;
+
+			nvmem-cell-names = "address";
+			/* The board must define the nvmem cells */
+
+			status = "disabled";
 		};
 
 		usb: usb@1b000100 {
