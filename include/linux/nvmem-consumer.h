@@ -33,7 +33,11 @@ struct nvmem_cell_info {
 
 /* Cell based interface */
 struct nvmem_cell *nvmem_cell_get(struct device *dev, const char *name);
+struct nvmem_cell *nvmem_cell_get_optional(struct device *dev,
+					   const char *name);
 struct nvmem_cell *devm_nvmem_cell_get(struct device *dev, const char *name);
+struct nvmem_cell *devm_nvmem_cell_get_optional(struct device *dev,
+						const char *name);
 void nvmem_cell_put(struct nvmem_cell *cell);
 void devm_nvmem_cell_put(struct device *dev, struct nvmem_cell *cell);
 void *nvmem_cell_read(struct nvmem_cell *cell, size_t *len);
@@ -63,11 +67,24 @@ static inline struct nvmem_cell *nvmem_cell_get(struct device *dev,
 	return ERR_PTR(-ENOSYS);
 }
 
+static inline struct nvmem_cell *nvmem_cell_get_optional(struct device *dev,
+							 const char *name)
+{
+	return NULL;
+}
+
 static inline struct nvmem_cell *devm_nvmem_cell_get(struct device *dev,
 				       const char *name)
 {
 	return ERR_PTR(-ENOSYS);
 }
+
+static inline struct nvmem_cell *devm_nvmem_cell_get_optional(
+	struct device *dev, const char *name)
+{
+	return NULL;
+}
+
 
 static inline void devm_nvmem_cell_put(struct device *dev,
 				       struct nvmem_cell *cell)
