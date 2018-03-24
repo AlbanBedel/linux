@@ -477,8 +477,8 @@ struct nvmem_device *nvmem_register(const struct nvmem_config *config)
 		     config->name ? : "nvmem",
 		     config->name ? config->id : nvmem->id);
 
-	nvmem->read_only = device_property_present(config->dev, "read-only") |
-			   config->read_only;
+	nvmem->read_only = device_property_present(config->dev, "read-only") ||
+			   config->read_only || !nvmem->reg_write;
 
 	if (config->root_only)
 		nvmem->dev.groups = nvmem->read_only ?
@@ -777,11 +777,21 @@ struct nvmem_cell *of_nvmem_cell_get(struct device_node *np,
 
 	cell_np = of_parse_phandle(np, "nvmem-cells", index);
 	if (!cell_np)
-		return ERR_PTR(-EINVAL);
+		return ERR_PTR(-ENOENT);
 
 	nvmem_np = of_get_next_parent(cell_np);
 	if (!nvmem_np)
 		return ERR_PTR(-EINVAL);
+
+	/* Devices using the new binding have all the cells in
+	 * a subnode with compatible = "nvmem-cells". In this
+	 * case the device will be the parent of this node.
+	 */
+	if (of_device_is_compatible(nvmem_np, "nvmem-cells")) {
+		nvmem_np = of_get_next_parent(nvmem_np);
+		if (!nvmem_np)
+			return ERR_PTR(-EINVAL);
+	}
 
 	nvmem = __nvmem_device_get(nvmem_np, NULL, NULL);
 	of_node_put(nvmem_np);
@@ -864,6 +874,30 @@ struct nvmem_cell *nvmem_cell_get(struct device *dev, const char *cell_id)
 }
 EXPORT_SYMBOL_GPL(nvmem_cell_get);
 
+/**
+ * nvmem_cell_get_optional() - Get an optional nvmem cell of device from
+ * a given id.
+ *
+ * @dev: Device that requests the nvmem cell.
+ * @cell_id: nvmem cell name to get.
+ *
+ * Return: Will be NULL if no cell with the given name is defined,
+ * an ERR_PTR() on error or a valid pointer to a struct nvmem_cell.
+ * The nvmem_cell will be freed by the nvmem_cell_put().
+ */
+struct nvmem_cell *nvmem_cell_get_optional(struct device *dev,
+					   const char *cell_id)
+{
+	struct nvmem_cell *cell;
+
+	cell = nvmem_cell_get(dev, cell_id);
+	if (IS_ERR(cell) && PTR_ERR(cell) == -ENOENT)
+		return NULL;
+
+	return cell;
+}
+EXPORT_SYMBOL_GPL(nvmem_cell_get_optional);
+
 static void devm_nvmem_cell_release(struct device *dev, void *res)
 {
 	nvmem_cell_put(*(struct nvmem_cell **)res);
@@ -898,6 +932,30 @@ struct nvmem_cell *devm_nvmem_cell_get(struct device *dev, const char *id)
 	return cell;
 }
 EXPORT_SYMBOL_GPL(devm_nvmem_cell_get);
+
+/**
+ * devm_nvmem_cell_get() - Get an optional nvmem cell of device from
+ * a given id.
+ *
+ * @dev: Device that requests the nvmem cell.
+ * @id: nvmem cell name id to get.
+ *
+ * Return: Will be NULL if the cell doesn't exists, an ERR_PTR() on
+ * error or a valid pointer to a struct nvmem_cell.  The nvmem_cell
+ * will be freed by the automatically once the device is freed.
+ */
+struct nvmem_cell *devm_nvmem_cell_get_optional(struct device *dev,
+						const char *cell_id)
+{
+	struct nvmem_cell *cell;
+
+	cell = devm_nvmem_cell_get(dev, cell_id);
+	if (IS_ERR(cell) && PTR_ERR(cell) == -ENOENT)
+		return NULL;
+
+	return cell;
+}
+EXPORT_SYMBOL_GPL(devm_nvmem_cell_get_optional);
 
 static int devm_nvmem_cell_match(struct device *dev, void *res, void *data)
 {

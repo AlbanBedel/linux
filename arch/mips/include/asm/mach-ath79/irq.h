@@ -10,7 +10,6 @@
 #define __ASM_MACH_ATH79_IRQ_H
 
 #define MIPS_CPU_IRQ_BASE	0
-#define NR_IRQS			51
 
 #define ATH79_CPU_IRQ(_x)	(MIPS_CPU_IRQ_BASE + (_x))
 

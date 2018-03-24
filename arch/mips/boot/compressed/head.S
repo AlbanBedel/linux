@@ -25,6 +25,29 @@ start:
 	move	s2, a2
 	move	s3, a3
 
+	/* Get the offset between the current address and linked address */
+	PTR_LA	t0, reloc_label
+	bal	reloc_label
+	 nop
+reloc_label:
+	subu	t0, ra, t0
+
+	/* If there is no offset no reloc is needed */
+	beqz	t0, clear_bss
+	 nop
+
+	/* Move the text, data section and DTB to the correct address */
+	PTR_LA	a0, .text
+	addu	a1, t0, a0
+	PTR_LA	a2, _edata
+copy_vmlinuz:
+	lw	a3, 0(a1)
+	sw	a3, 0(a0)
+	addiu	a0, a0, 4
+	bne	a2, a0, copy_vmlinuz
+	 addiu	a1, a1, 4
+
+clear_bss:
 	/* Clear BSS */
 	PTR_LA	a0, _edata
 	PTR_LA	a2, _end

@@ -74,6 +74,12 @@
 	clocks = <&extosc>;
 };
 
+&wmac {
+	status = "okay";
+	clocks = <&extosc>;
+	nvmem-cells = <&wmac_eeprom>, <&wmac_address>;
+};
+
 &usb {
 	status = "okay";
 };
@@ -96,6 +102,16 @@
 		partition@0 {
 			label = "u-boot";
 			reg = <0x000000 0x020000>;
+
+			nvmem-cells {
+				compatible = "nvmem-cells";
+				#address-cells = <1>;
+				#size-cells = <1>;
+
+				wmac_address: wmac-address@1fc00 {
+					reg = <0x1fc00 0x6>;
+				};
+			};
 		};
 
 		partition@1 {
@@ -107,6 +123,28 @@
 			label = "art";
 			reg = <0x7F0000 0x010000>;
 			read-only;
+
+			nvmem-cells {
+				compatible = "nvmem-cells";
+				#address-cells = <1>;
+				#size-cells = <1>;
+
+				wmac_eeprom: wmac-eeprom@1000 {
+					reg = <0x1000 0x1000>;
+				};
+			};
 		};
+	};
+};
+
+&eth0 {
+	status = "okay";
+
+	nvmem-cells = <&wmac_address>;
+
+	phy-connection-type = "rgmii";
+	phy-handle = <&eth0>;
+	fixed-link {
+		speed = <1000>;
 	};
 };

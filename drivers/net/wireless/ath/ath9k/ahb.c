@@ -18,6 +18,7 @@
 
 #include <linux/nl80211.h>
 #include <linux/platform_device.h>
+#include <linux/of_device.h>
 #include <linux/module.h>
 #include "ath9k.h"
 
@@ -49,6 +50,33 @@ static const struct platform_device_id ath9k_platform_id_table[] = {
 	{},
 };
 
+#ifdef CONFIG_OF
+static const struct of_device_id ath_ahb_of_match[] = {
+	{
+		.compatible = "qca,ar9100-wmac",
+		.data = (void *)AR5416_AR9100_DEVID
+	},
+	{
+		.compatible = "qca,ar9330-wmac",
+		.data = (void *)AR9300_DEVID_AR9330
+	},
+	{
+		.compatible = "qca,ar9340-wmac",
+		.data = (void *)AR9300_DEVID_AR9340
+	},
+	{
+		.compatible = "qca,qca9550-wmac",
+		.data = (void *)AR9300_DEVID_QCA955X
+	},
+	{
+		.compatible = "qca,qca9530-wmac",
+		.data = (void *)AR9300_DEVID_AR953X
+	},
+	{},
+};
+MODULE_DEVICE_TABLE(of, ath_ahb_of_match);
+#endif
+
 /* return bus cachesize in 4B word units */
 static void ath_ahb_read_cachesize(struct ath_common *common, int *csz)
 {
@@ -79,11 +107,13 @@ static int ath_ahb_probe(struct platform_device *pdev)
 	int ret = 0;
 	struct ath_hw *ah;
 	char hw_name[64];
+	u16 devid;
 
-	if (!dev_get_platdata(&pdev->dev)) {
-		dev_err(&pdev->dev, "no platform data specified\n");
-		return -EINVAL;
-	}
+	if (id)
+		devid = id->driver_data;
+	else
+		devid = (u16)(unsigned long)
+			of_device_get_match_data(&pdev->dev);
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (res == NULL) {
@@ -127,7 +157,7 @@ static int ath_ahb_probe(struct platform_device *pdev)
 		goto err_free_hw;
 	}
 
-	ret = ath9k_init_device(id->driver_data, sc, &ath_ahb_bus_ops);
+	ret = ath9k_init_device(devid, sc, &ath_ahb_bus_ops);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to initialize device\n");
 		goto err_irq;
@@ -167,6 +197,7 @@ static struct platform_driver ath_ahb_driver = {
 	.remove     = ath_ahb_remove,
 	.driver		= {
 		.name	= "ath9k",
+		.of_match_table = of_match_ptr(ath_ahb_of_match),
 	},
 	.id_table    = ath9k_platform_id_table,
 };

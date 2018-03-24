@@ -22,8 +22,11 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_net.h>
+#include <linux/nvmem-consumer.h>
 #include <linux/relay.h>
 #include <linux/dmi.h>
+#include <linux/clk.h>
+#include <linux/reset.h>
 #include <net/ieee80211_radiotap.h>
 
 #include "ath9k.h"
@@ -566,6 +569,7 @@ static int ath9k_eeprom_request(struct ath_softc *sc, const char *name)
 static void ath9k_eeprom_release(struct ath_softc *sc)
 {
 	release_firmware(sc->sc_ah->eeprom_blob);
+	kfree(sc->sc_ah->eeprom_data);
 }
 
 static int ath9k_init_platform(struct ath_softc *sc)
@@ -617,6 +621,7 @@ static int ath9k_of_init(struct ath_softc *sc)
 	struct ath_hw *ah = sc->sc_ah;
 	struct ath_common *common = ath9k_hw_common(ah);
 	enum ath_bus_type bus_type = common->bus_ops->ath_bus_type;
+	struct clk *clk;
 	const char *mac;
 	char eeprom_name[100];
 	int ret;
@@ -625,6 +630,12 @@ static int ath9k_of_init(struct ath_softc *sc)
 		return 0;
 
 	ath_dbg(common, CONFIG, "parsing configuration from OF node\n");
+
+	clk = clk_get(sc->dev, "ref");
+	if (!IS_ERR(clk)) {
+		ah->is_clk_25mhz = clk_get_rate(clk) == 25000000;
+		clk_put(clk);
+	}
 
 	if (of_property_read_bool(np, "qca,no-eeprom")) {
 		/* ath9k-eeprom-<bus>-<id>.bin */
@@ -645,6 +656,35 @@ static int ath9k_of_init(struct ath_softc *sc)
 	ah->ah_flags |= AH_NO_EEP_SWAP;
 
 	return 0;
+}
+
+static int ath9k_get_nvmem_address(struct ath_softc *sc)
+{
+	struct ath_common *common = ath9k_hw_common(sc->sc_ah);
+	struct nvmem_cell *cell;
+	size_t cell_size;
+	int err = 0;
+	void *mac;
+
+	cell = nvmem_cell_get(sc->dev, "address");
+	if (IS_ERR(cell))
+		return PTR_ERR(cell);
+
+	mac = nvmem_cell_read(cell, &cell_size);
+	nvmem_cell_put(cell);
+
+	if (IS_ERR(mac))
+		return PTR_ERR(mac);
+
+	if (cell_size == 6) {
+		ether_addr_copy(common->macaddr, mac);
+	} else {
+		dev_err(sc->dev, "nvmem 'address' cell has invalid size\n");
+		err = -EINVAL;
+	}
+
+	kfree(mac);
+	return err;
 }
 
 static int ath9k_init_softc(u16 devid, struct ath_softc *sc,
@@ -708,6 +748,38 @@ static int ath9k_init_softc(u16 devid, struct ath_softc *sc,
 	ret = ath9k_of_init(sc);
 	if (ret)
 		return ret;
+
+	/* If no MAC address has been set yet try to use nvmem */
+	if (!is_valid_ether_addr(common->macaddr))
+		ath9k_get_nvmem_address(sc);
+
+	/* Try to get a reset controller */
+	ah->reset = devm_reset_control_get_optional(sc->dev, NULL);
+	if (IS_ERR(ah->reset)) {
+		if (PTR_ERR(ah->reset) != -ENOENT &&
+		    PTR_ERR(ah->reset) != -ENOTSUPP)
+			return PTR_ERR(ah->reset);
+		ah->reset = NULL;
+	}
+
+	/* If the EEPROM hasn't been retrieved via firmware request
+	 * use the nvmem API insted.
+	 */
+	if (!ah->eeprom_blob) {
+		struct nvmem_cell *eeprom_cell;
+
+		eeprom_cell = nvmem_cell_get(ah->dev, "eeprom");
+		if (!IS_ERR(eeprom_cell)) {
+			ah->eeprom_data = nvmem_cell_read(
+				eeprom_cell, &ah->eeprom_size);
+			nvmem_cell_put(eeprom_cell);
+
+			if (IS_ERR(ah->eeprom_data)) {
+				dev_err(ah->dev, "failed to read eeprom\n");
+				return PTR_ERR(ah->eeprom_data);
+			}
+		}
+	}
 
 	if (ath9k_led_active_high != -1)
 		ah->config.led_active_high = ath9k_led_active_high == 1;
